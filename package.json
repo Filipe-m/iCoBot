@@ -7,7 +7,6 @@
     "start": "node ./bin/www",
     "watch": "nodemon --ext *"
   },
-  "type": "module",
   "author": "Filipe Moreira Coelho",
   "license": "ISC",
   "dependencies": {
