@@ -14,7 +14,7 @@ module.exports = {
       return interaction.reply({
         embeds: [
           {
-            color: 0x2957d8,
+            color: 0x52a02f,
             title: `${user.username}`,
             image: {
               url: `${user.displayAvatarURL({ dynamic: true })}`
@@ -27,7 +27,7 @@ module.exports = {
     return interaction.reply({
       embeds: [
         {
-          color: 0x2957d8,
+          color: 0x52a02f,
           title: `${interaction.user.username}`,
           image: {
             url: `${interaction.user.displayAvatarURL()}`

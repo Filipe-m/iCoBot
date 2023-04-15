@@ -2,15 +2,6 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js')
 require('dotenv').config()
-const express = require('express')
-const app = express()
-const port = 3000
-
-// Express
-
-app.listen(port, () => {
-  console.log(`Express online on port: ${port}`)
-})
 
 //Discord
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
