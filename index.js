@@ -1,10 +1,11 @@
 const fs = require('node:fs')
 const path = require('node:path')
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js')
+const { Client, Collection, GatewayIntentBits } = require('discord.js')
 require('dotenv').config()
-
+const SERVER_ID = process.env.SERVER_ID
+const BOT_KEY = process.env.BOT_KEY
 //Discord
-const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] })
 
 client.commands = new Collection()
 const foldersPath = path.join(__dirname, 'commands')
@@ -43,4 +44,18 @@ for (const file of eventFiles) {
   }
 }
 
-client.login(process.env.BOT_KEY)
+//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
+const schedule = require('node-schedule');
+
+const members = schedule.scheduleJob( '0 * * * *', function(){
+  async function getMembers(){
+    const guild = await client.guilds.fetch(SERVER_ID);
+    const members = await guild.members.fetch();
+    members.forEach( member => { 
+      console.log(member.user.username)
+    } )
+  }
+  getMembers()
+} )
+
+client.login(BOT_KEY)
