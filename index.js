@@ -1,11 +1,22 @@
 const fs = require('node:fs')
 const path = require('node:path')
-const { Client, Collection, GatewayIntentBits } = require('discord.js')
+const {
+  Client,
+  Events,
+  Collection,
+  GatewayIntentBits,
+  Partials
+} = require('discord.js')
+const schedule = require('node-schedule')
+const Users = require('./models/Users')
 require('dotenv').config()
 const SERVER_ID = process.env.SERVER_ID
 const BOT_KEY = process.env.BOT_KEY
 //Discord
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] })
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  partials: [Partials.GuildMember, Partials.User]
+})
 
 client.commands = new Collection()
 const foldersPath = path.join(__dirname, 'commands')
@@ -45,17 +56,34 @@ for (const file of eventFiles) {
 }
 
 //Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
-const schedule = require('node-schedule');
 
-const members = schedule.scheduleJob( '0 * * * *', function(){
-  async function getMembers(){
-    const guild = await client.guilds.fetch(SERVER_ID);
-    const members = await guild.members.fetch();
-    members.forEach( member => { 
-      console.log(member.user.username)
-    } )
+//Adds users that are aldery in the server to the database
+client.once(Events.ClientReady, () => {
+  async function getMembers() {
+    const guild = await client.guilds.fetch(SERVER_ID)
+    const members = await guild.members.fetch()
+    return members
   }
-  getMembers()
-} )
+  let members = getMembers()
+  members.then(members =>
+    members.forEach(member => {
+      Users.findOne({ where: { id: member.user.id } }).then(user => {
+        //is in the database
+        if (user != undefined) {
+        }
+        //is not in the database
+        else {
+          //ignore the bots
+          if (!member.user.bot)
+            Users.create({
+              id: member.user.id,
+              userName: member.user.username,
+              lastDate: new Date()
+            })
+        }
+      })
+    })
+  )
+})
 
 client.login(BOT_KEY)
