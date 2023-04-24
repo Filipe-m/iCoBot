@@ -10,7 +10,6 @@
   "author": "Filipe Moreira Coelho",
   "license": "ISC",
   "dependencies": {
-    "dayjs": "^1.11.7",
     "discord.js": "^14.9.0",
     "dotenv": "^16.0.3",
     "node-schedule": "^2.1.1",

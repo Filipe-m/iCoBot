@@ -1,11 +1,13 @@
 const fs = require('node:fs')
 const path = require('node:path')
+const { Op } = require('sequelize')
 const {
   Client,
-  Events,
   Collection,
   GatewayIntentBits,
-  Partials
+  Partials,
+  ActionRowBuilder,
+  StringSelectMenuBuilder
 } = require('discord.js')
 const schedule = require('node-schedule')
 const Users = require('./models/Users')
@@ -55,10 +57,8 @@ for (const file of eventFiles) {
   }
 }
 
-//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
-
 //Adds users that are aldery in the server to the database
-client.once(Events.ClientReady, () => {
+/* client.once(Events.ClientReady, () => {
   async function getMembers() {
     const guild = await client.guilds.fetch(SERVER_ID)
     const members = await guild.members.fetch()
@@ -75,15 +75,111 @@ client.once(Events.ClientReady, () => {
         else {
           //ignore the bots
           if (!member.user.bot)
-            Users.create({
-              id: member.user.id,
-              userName: member.user.username,
-              lastDate: new Date()
-            })
+          Users.create({
+            id: member.user.id,
+            userName: member.user.username,
+            lastDate: new Date()
+          })
         }
       })
     })
   )
+}) */
+
+//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
+
+const search = schedule.scheduleJob('* 12 * * *', function () {
+  const oneHourAgo = new Date()
+  oneHourAgo.setHours(oneHourAgo.getHours() - 1)
+
+  Users.findAll({
+    where: {
+      lastDate: {
+        [Op.lt]: oneHourAgo
+      }
+    }
+  })
+    .then(users => {
+      users.forEach(user => {
+        Users.update({ lastDate: new Date() }, { where: { id: user.id } })
+        sendForm(user.id)
+      })
+    })
+    .catch(err => {
+      console.log(err)
+    })
 })
+
+async function sendForm(id) {
+  const options = [
+    {
+      label: 'Muito bom',
+      value: '5'
+    },
+    {
+      label: 'Bom',
+      value: '4'
+    },
+    {
+      label: 'Mediano',
+      value: '3'
+    },
+    {
+      label: 'Ruim',
+      value: '2'
+    },
+    {
+      label: 'Muito ruim',
+      value: '1'
+    }
+  ]
+  const userID = id
+
+  const user = await client.users.fetch(userID)
+
+  const server = new StringSelectMenuBuilder()
+    .setCustomId('server')
+    .setPlaceholder('Como você avaliaria o servidor?')
+    .addOptions(options)
+
+  const learning = new StringSelectMenuBuilder()
+    .setCustomId('learning')
+    .setPlaceholder('Como você avaliaria seu aprendizado?')
+    .addOptions(options)
+
+  const serverRow = new ActionRowBuilder().addComponents(server)
+  const learningRow = new ActionRowBuilder().addComponents(learning)
+
+  //Send to Dm
+  const message = await user.send({
+    content: 'Faça avaliações sobre a sua experiência dentro da comunidade',
+    components: [serverRow, learningRow]
+  })
+
+  const collector = message.createMessageComponentCollector({
+    filter: i => i.user.id === userID,
+    time: 6000
+  })
+
+  collector.on('collect', interaction => {
+    if (interaction.customId === 'server') {
+      selectedOption1 = interaction.values[0]
+      server.setDisabled(true)
+    }
+
+    if (interaction.customId === 'learning') {
+      selectedOption2 = interaction.values[0]
+      learning.setDisabled(true)
+    }
+
+    interaction.update({ components: [serverRow, learningRow] })
+  })
+
+  collector.on('end', () => {
+    collector.collected.forEach(i => {
+      console.log(`Tipo: ${i.customId}, valor:${i.values[0]}`) // return the value of the options
+    })
+  })
+}
 
 client.login(BOT_KEY)
