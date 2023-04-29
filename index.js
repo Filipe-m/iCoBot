@@ -6,8 +6,15 @@ const {
   Collection,
   GatewayIntentBits,
   Partials,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   ActionRowBuilder,
-  StringSelectMenuBuilder
+  StringSelectMenuBuilder,
+  Events,
+  ButtonBuilder,
+  ButtonStyle,
+  InteractionType
 } = require('discord.js')
 const schedule = require('node-schedule')
 const Users = require('./models/Users')
@@ -86,16 +93,102 @@ for (const file of eventFiles) {
   )
 }) */
 
-//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
+//send request to send form
+client.on(Events.GuildMemberAdd, member => {
+  sendWelcomeForm(member.id)
+})
 
-const search = schedule.scheduleJob('* 12 * * *', function () {
-  const oneHourAgo = new Date()
-  oneHourAgo.setHours(oneHourAgo.getHours() - 1)
+async function sendWelcomeForm(id) {
+  const userID = id
+
+  const user = await client.users.fetch(userID)
+
+  const button = new ButtonBuilder()
+    .setCustomId('confirm')
+    .setStyle(ButtonStyle.Success)
+    .setLabel('Clique para responder')
+
+  const buttonRow = new ActionRowBuilder().addComponents(button)
+
+  const message = await user.send({
+    components: [buttonRow]
+  })
+}
+
+// Send form and listen to the response
+client.on(Events.InteractionCreate, async interaction => {
+  if (interaction.isButton()) {
+    if (interaction.customId === 'confirm') {
+      const modal = new ModalBuilder()
+        .setCustomId('welcome')
+        .setTitle('Bem vindos, responde o seguinte questionário')
+
+      const heardFrom = new TextInputBuilder()
+        .setCustomId('heardFrom')
+        .setLabel('Onde você ouviu falar da iCoDev?')
+        .setStyle(TextInputStyle.Short)
+        .setMaxLength(255)
+        .setRequired(true)
+
+      const objective = new TextInputBuilder()
+        .setCustomId('objective')
+        .setLabel('Qual seu objetivo em participar da iCoDev?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const interest = new TextInputBuilder()
+        .setCustomId('interest')
+        .setLabel('O que fez você se interessar pela iCoDev?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const dificulty = new TextInputBuilder()
+        .setCustomId('dificulty')
+        .setLabel('Você possui dificuldades no seu aprendizado?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const firstActionRow = new ActionRowBuilder().addComponents(heardFrom)
+      const secondActionRow = new ActionRowBuilder().addComponents(objective)
+      const thirdActionRow = new ActionRowBuilder().addComponents(interest)
+      const fourthActionRow = new ActionRowBuilder().addComponents(dificulty)
+      modal.addComponents(
+        firstActionRow,
+        secondActionRow,
+        thirdActionRow,
+        fourthActionRow
+      )
+
+      await interaction.showModal(modal)
+    }
+  }
+
+  if (interaction.type === InteractionType.ModalSubmit) {
+    console.log(interaction)
+    const response = interaction.fields
+    console.log(interaction.user.id)
+    console.log(response.getTextInputValue('objective'))
+    const update = await interaction.update({
+      content: 'Obrigado pelas respostas! <a:check:1060266101482717355>',
+      components: []
+    })
+  }
+})
+
+//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
+//Checks every 12:00 for a user that the last form was sent more than 1 hours ago, if yes reset the timer and send a form
+
+const search = schedule.scheduleJob('2 * * * *', function () {
+  const oneMinuteAgo = new Date()
+  oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1)
 
   Users.findAll({
     where: {
       lastDate: {
-        [Op.lt]: oneHourAgo
+        [Op.lt]: oneMinuteAgo
       }
     }
   })
@@ -110,6 +203,7 @@ const search = schedule.scheduleJob('* 12 * * *', function () {
     })
 })
 
+//Send the form with the question in the DM of the user
 async function sendForm(id) {
   const options = [
     {
@@ -158,7 +252,7 @@ async function sendForm(id) {
 
   const collector = message.createMessageComponentCollector({
     filter: i => i.user.id === userID,
-    time: 6000
+    time: 15000
   })
 
   collector.on('collect', interaction => {
@@ -177,7 +271,8 @@ async function sendForm(id) {
 
   collector.on('end', () => {
     collector.collected.forEach(i => {
-      console.log(`Tipo: ${i.customId}, valor:${i.values[0]}`) // return the value of the options
+      //console.log(`Tipo: ${i.customId}, valor:${i.values[0]}`) // return the value of the options
+      console.log(i)
     })
   })
 }
