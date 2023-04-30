@@ -127,7 +127,7 @@ client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isButton()) {
     if (interaction.customId === 'confirm') {
       const modal = new ModalBuilder()
-        .setCustomId('welcome')
+        .setCustomId('welcomeForm')
         .setTitle('Bem vindos, responde o seguinte questionário')
 
       const heardFrom = new TextInputBuilder()
@@ -171,28 +171,86 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.showModal(modal)
     }
+
+    if (interaction.customId === 'accept') {
+      const modal = new ModalBuilder()
+        .setCustomId('form')
+        .setTitle('Formulário de avaliação')
+
+      const objectives = new TextInputBuilder()
+        .setCustomId('objectives')
+        .setLabel('A iCoDev te auxiliou com seus objetivos?')
+        .setStyle(TextInputStyle.Short)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const experience = new TextInputBuilder()
+        .setCustomId('experience')
+        .setLabel('Como foi sua experiência até o momento?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const improve = new TextInputBuilder()
+        .setCustomId('improve')
+        .setLabel('O que poderia melhorar a sua experiência?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
+      const recommend = new TextInputBuilder()
+        .setCustomId('recommend')
+        .setLabel('De 0 a 10,quanto recomendaria para um amigo?')
+        .setStyle(TextInputStyle.Short)
+        .setMaxLength(2)
+        .setRequired(false)
+
+      const firstActionRow = new ActionRowBuilder().addComponents(objectives)
+      const secondActionRow = new ActionRowBuilder().addComponents(experience)
+      const thirdActionRow = new ActionRowBuilder().addComponents(improve)
+      const fourthActionRow = new ActionRowBuilder().addComponents(recommend)
+      modal.addComponents(
+        firstActionRow,
+        secondActionRow,
+        thirdActionRow,
+        fourthActionRow
+      )
+
+      await interaction.showModal(modal)
+    }
+    if (interaction.customId === 'deny') {
+      const update = await interaction.update({
+        content: 'Tudo bem, esperamos que esteja gostando do servidor!',
+        components: []
+      })
+    }
   }
 
   if (interaction.type === InteractionType.ModalSubmit) {
     const response = interaction.fields
-    WelcomeQuestions.create({
-      id: interaction.user.id,
-      heardFrom: response.getTextInputValue('heardFrom'),
-      objective: response.getTextInputValue('objective'),
-      interest: response.getTextInputValue('interest'),
-      dificulty: response.getTextInputValue('dificulty')
-    })
-    const update = await interaction.update({
-      content: 'Obrigado pelas respostas! <a:check:1060266101482717355>',
-      components: []
-    })
+    if (interaction.customId === 'welcomeForm') {
+      WelcomeQuestions.create({
+        id: interaction.user.id,
+        heardFrom: response.getTextInputValue('heardFrom'),
+        objective: response.getTextInputValue('objective'),
+        interest: response.getTextInputValue('interest'),
+        dificulty: response.getTextInputValue('dificulty')
+      })
+      const update = await interaction.update({
+        content: 'Obrigado pelas respostas! <a:check:1060266101482717355>',
+        components: []
+      })
+    }
+    if (interaction.customId === 'form') {
+      
+    }
   }
 })
 
 //Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
 //Checks every 12:00 for a user that the last form was sent more than 1 hours ago, if yes reset the timer and send a form
 
-const search = schedule.scheduleJob('2 * * * *', function () {
+const search = schedule.scheduleJob('28 * * * *', function () {
   const oneMinuteAgo = new Date()
   oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1)
 
@@ -216,75 +274,27 @@ const search = schedule.scheduleJob('2 * * * *', function () {
 
 //Send the form with the question in the DM of the user
 async function sendForm(id) {
-  const options = [
-    {
-      label: 'Muito bom',
-      value: '5'
-    },
-    {
-      label: 'Bom',
-      value: '4'
-    },
-    {
-      label: 'Mediano',
-      value: '3'
-    },
-    {
-      label: 'Ruim',
-      value: '2'
-    },
-    {
-      label: 'Muito ruim',
-      value: '1'
-    }
-  ]
   const userID = id
 
   const user = await client.users.fetch(userID)
 
-  const server = new StringSelectMenuBuilder()
-    .setCustomId('server')
-    .setPlaceholder('Como você avaliaria o servidor?')
-    .addOptions(options)
+  const accept = new ButtonBuilder()
+    .setCustomId('accept')
+    .setStyle(ButtonStyle.Success)
+    .setLabel('Sim')
 
-  const learning = new StringSelectMenuBuilder()
-    .setCustomId('learning')
-    .setPlaceholder('Como você avaliaria seu aprendizado?')
-    .addOptions(options)
+  const deny = new ButtonBuilder()
+    .setCustomId('deny')
+    .setStyle(ButtonStyle.Danger)
+    .setLabel('Não')
 
-  const serverRow = new ActionRowBuilder().addComponents(server)
-  const learningRow = new ActionRowBuilder().addComponents(learning)
+  const firstActionRow = new ActionRowBuilder().addComponents(accept, deny)
+  const secondActionRow = new ActionRowBuilder().addComponents(deny)
 
-  //Send to Dm
   const message = await user.send({
-    content: 'Faça avaliações sobre a sua experiência dentro da comunidade',
-    components: [serverRow, learningRow]
-  })
-
-  const collector = message.createMessageComponentCollector({
-    filter: i => i.user.id === userID,
-    time: 15000
-  })
-
-  collector.on('collect', interaction => {
-    if (interaction.customId === 'server') {
-      selectedOption1 = interaction.values[0]
-      server.setDisabled(true)
-    }
-
-    if (interaction.customId === 'learning') {
-      selectedOption2 = interaction.values[0]
-      learning.setDisabled(true)
-    }
-
-    interaction.update({ components: [serverRow, learningRow] })
-  })
-
-  collector.on('end', () => {
-    collector.collected.forEach(i => {
-      //console.log(`Tipo: ${i.customId}, valor:${i.values[0]}`) // return the value of the options
-      console.log(i)
-    })
+    content:
+      'Parece que você já está a um tempo nessa comunidade, poderia nos contar sua experiência?',
+    components: [firstActionRow]
   })
 }
 
