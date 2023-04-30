@@ -1,27 +1,31 @@
 const Sequelize = require('sequelize')
 const sequelize = require('../utils/database')
 
-const WelcomeQuestions = sequelize.define('welcomeQuestions', {
-  id: {
+const Questions = sequelize.define('questions', {
+  userId: {
     type: Sequelize.INTEGER,
-    primaryKey: true
-  },
-  heardFrom: {
-    type: Sequelize.STRING,
     allowNull: false
   },
-  objective: {
+  objectives: {
     type: Sequelize.STRING,
     allowNull: true
   },
-  interest: {
+  experience: {
     type: Sequelize.STRING,
     allowNull: true
   },
-  dificulty: {
+  improve: {
     type: Sequelize.STRING,
+    allowNull: true
+  },
+  liked: {
+    type: Sequelize.STRING,
+    allowNull: true
+  },
+  recommend: {
+    type: Sequelize.INTEGER,
     allowNull: true
   }
 })
 
-module.exports = WelcomeQuestions
+module.exports = Questions

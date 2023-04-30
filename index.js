@@ -19,6 +19,7 @@ const {
 const schedule = require('node-schedule')
 const Users = require('./models/Users')
 const WelcomeQuestions = require('./models/WelcomeQuestions')
+const Questions = require('./models/Questions')
 require('dotenv').config()
 const SERVER_ID = process.env.SERVER_ID
 const BOT_KEY = process.env.BOT_KEY
@@ -66,7 +67,7 @@ for (const file of eventFiles) {
 }
 
 //Adds users that are aldery in the server to the database
-/* client.once(Events.ClientReady, () => {
+client.once(Events.ClientReady, () => {
   async function getMembers() {
     const guild = await client.guilds.fetch(SERVER_ID)
     const members = await guild.members.fetch()
@@ -83,16 +84,16 @@ for (const file of eventFiles) {
         else {
           //ignore the bots
           if (!member.user.bot)
-          Users.create({
-            id: member.user.id,
-            userName: member.user.username,
-            lastDate: new Date()
-          })
+            Users.create({
+              id: member.user.id,
+              userName: member.user.username,
+              lastDate: new Date()
+            })
         }
       })
     })
   )
-}) */
+})
 
 //send request to send form
 client.on(Events.GuildMemberAdd, member => {
@@ -119,6 +120,56 @@ async function sendWelcomeForm(id) {
   const message = await user.send({
     content: 'Olá, bem vindo a iCoDev, poderia responder 4 perguntas rápidas?',
     components: [buttonRow]
+  })
+}
+
+//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
+//Checks every 12:00 for a user that the last form was sent more than 1 hours ago, if yes reset the timer and send a form
+
+const search = schedule.scheduleJob('* 12 * * *', function () {
+  const oneMonthAgo = new Date()
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+
+  Users.findAll({
+    where: {
+      lastDate: {
+        [Op.lt]: oneMonthAgo
+      }
+    }
+  })
+    .then(users => {
+      users.forEach(user => {
+        Users.update({ lastDate: new Date() }, { where: { id: user.id } })
+        sendForm(user.id)
+      })
+    })
+    .catch(err => {
+      console.log(err)
+    })
+})
+
+//Send the form with the question in the DM of the user
+async function sendForm(id) {
+  const userID = id
+
+  const user = await client.users.fetch(userID)
+
+  const accept = new ButtonBuilder()
+    .setCustomId('accept')
+    .setStyle(ButtonStyle.Success)
+    .setLabel('Sim')
+
+  const deny = new ButtonBuilder()
+    .setCustomId('deny')
+    .setStyle(ButtonStyle.Danger)
+    .setLabel('Não')
+
+  const firstActionRow = new ActionRowBuilder().addComponents(accept, deny)
+
+  const message = await user.send({
+    content:
+      'Parece que você já está a um tempo nessa comunidade, poderia nos contar um pouco da sua experiência?',
+    components: [firstActionRow]
   })
 }
 
@@ -198,6 +249,13 @@ client.on(Events.InteractionCreate, async interaction => {
         .setMaxLength(255)
         .setRequired(false)
 
+      const liked = new TextInputBuilder()
+        .setCustomId('liked')
+        .setLabel('O que você mais gostou na iCoDev?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setMaxLength(255)
+        .setRequired(false)
+
       const recommend = new TextInputBuilder()
         .setCustomId('recommend')
         .setLabel('De 0 a 10,quanto recomendaria para um amigo?')
@@ -208,12 +266,15 @@ client.on(Events.InteractionCreate, async interaction => {
       const firstActionRow = new ActionRowBuilder().addComponents(objectives)
       const secondActionRow = new ActionRowBuilder().addComponents(experience)
       const thirdActionRow = new ActionRowBuilder().addComponents(improve)
-      const fourthActionRow = new ActionRowBuilder().addComponents(recommend)
+      const fourthActionRow = new ActionRowBuilder().addComponents(liked)
+      const fifthActionRow = new ActionRowBuilder().addComponents(recommend)
+
       modal.addComponents(
         firstActionRow,
         secondActionRow,
         thirdActionRow,
-        fourthActionRow
+        fourthActionRow,
+        fifthActionRow
       )
 
       await interaction.showModal(modal)
@@ -228,9 +289,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
   if (interaction.type === InteractionType.ModalSubmit) {
     const response = interaction.fields
+    const id = Number(interaction.user.id)
     if (interaction.customId === 'welcomeForm') {
       WelcomeQuestions.create({
-        id: interaction.user.id,
+        userId: id,
         heardFrom: response.getTextInputValue('heardFrom'),
         objective: response.getTextInputValue('objective'),
         interest: response.getTextInputValue('interest'),
@@ -241,61 +303,33 @@ client.on(Events.InteractionCreate, async interaction => {
         components: []
       })
     }
+
     if (interaction.customId === 'form') {
-      
+      let rating
+      if (isNaN(Number(response.getTextInputValue('recommend')))) {
+        rating = 404
+      } else if (response.getTextInputValue('recommend') === '') {
+        rating = undefined
+      } else {
+        rating = Number(response.getTextInputValue('recommend'))
+      }
+
+      Questions.create({
+        userId: id,
+        objectives: response.getTextInputValue('objectives'),
+        experience: response.getTextInputValue('experience'),
+        improve: response.getTextInputValue('improve'),
+        liked: response.getTextInputValue('liked'),
+        recommend: rating
+      })
+
+      const update = await interaction.update({
+        content:
+          'Obrigado pela avaliação! <a:purpleverify:1060266170407735376>',
+        components: []
+      })
     }
   }
 })
-
-//Node schedule run this function every X time to updating the members [https://www.npmjs.com/package/node-schedule]
-//Checks every 12:00 for a user that the last form was sent more than 1 hours ago, if yes reset the timer and send a form
-
-const search = schedule.scheduleJob('28 * * * *', function () {
-  const oneMinuteAgo = new Date()
-  oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1)
-
-  Users.findAll({
-    where: {
-      lastDate: {
-        [Op.lt]: oneMinuteAgo
-      }
-    }
-  })
-    .then(users => {
-      users.forEach(user => {
-        Users.update({ lastDate: new Date() }, { where: { id: user.id } })
-        sendForm(user.id)
-      })
-    })
-    .catch(err => {
-      console.log(err)
-    })
-})
-
-//Send the form with the question in the DM of the user
-async function sendForm(id) {
-  const userID = id
-
-  const user = await client.users.fetch(userID)
-
-  const accept = new ButtonBuilder()
-    .setCustomId('accept')
-    .setStyle(ButtonStyle.Success)
-    .setLabel('Sim')
-
-  const deny = new ButtonBuilder()
-    .setCustomId('deny')
-    .setStyle(ButtonStyle.Danger)
-    .setLabel('Não')
-
-  const firstActionRow = new ActionRowBuilder().addComponents(accept, deny)
-  const secondActionRow = new ActionRowBuilder().addComponents(deny)
-
-  const message = await user.send({
-    content:
-      'Parece que você já está a um tempo nessa comunidade, poderia nos contar sua experiência?',
-    components: [firstActionRow]
-  })
-}
 
 client.login(BOT_KEY)
