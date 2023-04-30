@@ -18,6 +18,7 @@ const {
 } = require('discord.js')
 const schedule = require('node-schedule')
 const Users = require('./models/Users')
+const WelcomeQuestions = require('./models/WelcomeQuestions')
 require('dotenv').config()
 const SERVER_ID = process.env.SERVER_ID
 const BOT_KEY = process.env.BOT_KEY
@@ -95,7 +96,12 @@ for (const file of eventFiles) {
 
 //send request to send form
 client.on(Events.GuildMemberAdd, member => {
-  sendWelcomeForm(member.id)
+  WelcomeQuestions.findOne({ where: { id: member.id } }).then(user => {
+    if (user != undefined) {
+    } else {
+      sendWelcomeForm(member.id)
+    }
+  })
 })
 
 async function sendWelcomeForm(id) {
@@ -111,6 +117,7 @@ async function sendWelcomeForm(id) {
   const buttonRow = new ActionRowBuilder().addComponents(button)
 
   const message = await user.send({
+    content: 'Olá, bem vindo a iCoDev, poderia responder 4 perguntas rápidas?',
     components: [buttonRow]
   })
 }
@@ -167,10 +174,14 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 
   if (interaction.type === InteractionType.ModalSubmit) {
-    console.log(interaction)
     const response = interaction.fields
-    console.log(interaction.user.id)
-    console.log(response.getTextInputValue('objective'))
+    WelcomeQuestions.create({
+      id: interaction.user.id,
+      heardFrom: response.getTextInputValue('heardFrom'),
+      objective: response.getTextInputValue('objective'),
+      interest: response.getTextInputValue('interest'),
+      dificulty: response.getTextInputValue('dificulty')
+    })
     const update = await interaction.update({
       content: 'Obrigado pelas respostas! <a:check:1060266101482717355>',
       components: []
