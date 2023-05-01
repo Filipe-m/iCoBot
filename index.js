@@ -312,6 +312,9 @@ client.on(Events.InteractionCreate, async interaction => {
         rating = undefined
       } else {
         rating = Number(response.getTextInputValue('recommend'))
+        if (rating > 10) {
+          rating = 10
+        }
       }
 
       Questions.create({
