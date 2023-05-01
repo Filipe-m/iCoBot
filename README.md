@@ -62,14 +62,30 @@ Inicie o servidor
 ![Discord.js version](https://img.shields.io/badge/Discord.js-14.9.0-blue)
 
 ![Sequelize version](https://img.shields.io/badge/Sequelize-6.31.0-blueviolet)
+## Usado por
+
+Esse projeto é usado por [iCodev](https://discord.gg/Yu55wcHef3) 
+
+## Documentação das perguntas
+
+| Alias| Pergunta|
+|-----------------| ---------------------------------------------------------------- |
+|heardFrom|Onde você ouviu falar da iCoDev?|
+|objective| Qual seu objetivo em participar da iCoDev?|
+|interest| O que fez você se interessar pela iCoDev?|
+|dificulty| Você possui dificuldades no seu aprendizado?|
+|||
+|||
+| objectives |A iCoDev te auxiliou com seus objetivos?|
+| experience |Como foi sua experiência até o momento? |
+|improve|O que poderia melhorar a sua experiência?|
+|liked|O que você mais gostou na iCoDev?|
+|recommend|De 0 a 10,quanto recomendaria para um amigo?|
+
+
 ## Autores
 
 - [@filipe-m](https://github.com/Filipe-m)
 - [@zlobomau ](https://github.com/zlobomau)
 - [@pedro]()
-
-
-## Usado por
-
-Esse projeto é usado por [iCodev](https://discord.gg/Yu55wcHef3) 
 
