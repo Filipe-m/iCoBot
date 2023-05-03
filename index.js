@@ -10,7 +10,6 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   Events,
   ButtonBuilder,
   ButtonStyle,
