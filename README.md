@@ -87,5 +87,5 @@ Esse projeto é usado por [iCodev](https://discord.gg/Yu55wcHef3)
 
 - [@filipe-m](https://github.com/Filipe-m)
 - [@zlobomau ](https://github.com/zlobomau)
-- [@pedro]()
+- [@pedro](https://github.com/dueiriel)
 
